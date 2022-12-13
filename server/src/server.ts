@@ -8,7 +8,7 @@ import { DateTimeResolver } from "graphql-scalars";
 import path from "path";
 import { GraphQLSchema } from "graphql";
 import { Mission } from "./types";
-import { CreateMission, GetMissionById, ListMissions } from "./queries";
+import { CreateMission, GetMissionById, ListMissions, DeleteMission, EditMission } from "./queries";
 
 const DATA_DIR = path.join(__dirname, "../.data");
 const DATA_DIR_INIT = path.join(__dirname, "../data/init");
@@ -81,10 +81,8 @@ const main = async () => {
       Mutation: {
         async createMission(obj, args) {
           const missions = await loadMissions();
-
           const mission = CreateMission(args.mission);
           missions.push(mission);
-
           await writeFile(
             path.join(DATA_DIR, DATA_FILE_MISSIONS),
             JSON.stringify(missions),
@@ -92,13 +90,33 @@ const main = async () => {
           );
           return mission;
         },
+        async deleteMission(obj, args) {
+          const missions = await loadMissions();
+          const missionsAfterDelete = DeleteMission(missions, args.id);
+          await writeFile(
+            path.join(DATA_DIR, DATA_FILE_MISSIONS),
+            JSON.stringify(missionsAfterDelete),
+            "utf8"
+          );
+          return missionsAfterDelete;
+        },
+        async editMission(obj, args) {
+          const missions = await loadMissions();
+          const missionsAfterEdit = EditMission(missions, args.id, args.mission);
+          await writeFile(
+            path.join(DATA_DIR, DATA_FILE_MISSIONS),
+            JSON.stringify(missionsAfterEdit),
+            "utf8"
+          );
+          return missionsAfterEdit;
+        },
       },
     },
   });
 
-  app.get("/readme", 
-    async (req : Request, res: Response ) => {
-      const readme : String = await readFile(path.join(__dirname, "../../README.md"), "utf8")
+  app.get("/readme",
+    async (req: Request, res: Response) => {
+      const readme: String = await readFile(path.join(__dirname, "../../README.md"), "utf8")
       res.send(readme);
     }
   );
@@ -110,6 +128,8 @@ const main = async () => {
       graphiql: { headerEditorEnabled: false },
     })
   );
+
 };
+
 
 main();

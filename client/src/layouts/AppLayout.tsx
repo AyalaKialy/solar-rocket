@@ -43,7 +43,7 @@ const Main = styled('main', { shouldForwardProp: (prop) => prop !== 'open' })<{
     easing: theme.transitions.easing.sharp,
     duration: theme.transitions.duration.leavingScreen,
   }),
-  
+
   ...(open && {
     width: `calc(100% - ${drawerWidth}px)`,
     marginLeft: `${drawerWidth}px`,
@@ -96,7 +96,7 @@ const AppLayout: React.FC<pageProps> = ({ children, title }) => {
   const toggleDrawer = () => {
     setDrawerOpen(!drawerOpen);
   };
-  
+
 
   return (
     <Box sx={{ display: "flex" }}>

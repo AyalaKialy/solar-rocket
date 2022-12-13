@@ -1,6 +1,6 @@
 import { SyntheticEvent, useEffect, useState } from "react";
 import { AppLayout } from "../layouts/AppLayout";
-import fetchGraphQL from "../graphql/GraphQL";
+import { fetchGraphQL } from "../graphql/GraphQL";
 import { Mission } from "../graphql/schema";
 import {
   Card,
@@ -10,45 +10,40 @@ import {
   Button,
   Grid,
   Typography,
-  Fab,
-  Dialog,
-  DialogTitle,
-  TextField,
-  DialogContent,
-  DialogActions,
   Toolbar,
   Container,
   IconButton,
-  Tooltip,
   Snackbar,
   Alert,
   Box,
   CircularProgress,
 } from "@mui/material";
-
 import {
-  Add as AddIcon,
   FilterAlt as FilterAltIcon,
   Sort as SortIcon,
   ArrowDownward as ArrowDownwardIcon,
   ArrowUpward as ArrowUpwardIcon,
 } from "@mui/icons-material";
-import { DateTimePicker, LocalizationProvider } from "@mui/x-date-pickers";
-import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
-
 import { ListMenu } from "../components/ListMenu";
+import { NewMission } from "../components/NewMission";
+import { EditMission } from "../components/EditMission";
 
-type SortField = "Title" | "Date";
+type SortField = "Title" | "Date" | "Operator";
 
 interface MissionsResponse {
   data: {
     Missions: Mission[];
   };
-}
+};
 
+interface DeleteResponse {
+  data: {
+    deleteMission: Mission[];
+  };
+};
 const getMissions = async (
   sortField: SortField,
-  sortDesc?: Boolean
+  sortDesc: Boolean
 ): Promise<MissionsResponse> => {
   return await fetchGraphQL(
     `
@@ -56,6 +51,7 @@ const getMissions = async (
     Missions(
       sort: {
         field: ${sortField}
+        desc:${sortDesc}
       }
     ) {
       id
@@ -70,11 +66,49 @@ const getMissions = async (
     []
   );
 };
+const deleteMissionById = async (
+  id: String
+): Promise<MissionsResponse> => {
+  return await fetchGraphQL(
+    `mutation ($id: ID!){
+			deleteMission(id: $id)
+			{
+				id
+				title
+				operator
+				launch {
+				date
+				}
+			}
+		}
+		`,
+    { id: id }
+  );
+};
+
+const editMissionById = async (
+  id: String
+): Promise<MissionsResponse> => {
+  return await fetchGraphQL(
+    `mutation ($id: ID!){
+			editMission(id: $id)
+			{
+				id
+				title
+				operator
+				launch {
+				date
+				}
+			}
+		}
+		`,
+    { id: id }
+  );
+};
+
 
 const Missions = (): JSX.Element => {
   const [missions, setMissions] = useState<Mission[] | null>(null);
-  const [newMissionOpen, setNewMissionOpen] = useState(false);
-  const [tempLaunchDate, setTempLaunchDate] = useState<Date | null>(null);
   const [sortDesc, setSortDesc] = useState<boolean>(false);
   const [sortField, setSortField] = useState<SortField>("Title");
   const [errMessage, setErrMessage] = useState<String | null>(null);
@@ -84,28 +118,28 @@ const Missions = (): JSX.Element => {
     setErrMessage(null);
   };
 
-  const handleNewMissionOpen = () => {
-    setTempLaunchDate(null);
-    setNewMissionOpen(true);
-  };
-
-  const handleNewMissionClose = () => {
-    setNewMissionOpen(false);
-  };
-
-  const handleTempLaunchDateChange = (newValue: Date | null) => {
-    setTempLaunchDate(newValue);
-  };
-
   const handleSortFieldChange = (event: SyntheticEvent, value: SortField) => {
     setSortField(value);
   };
+
   const handleSortDescClick = () => {
     setSortDesc(!sortDesc);
   };
 
+  const deleteMission = (id: String) => {
+    deleteMissionById(id)
+      .then((result: any) => {
+        setMissions(result.data.deleteMission);
+      })
+      .catch((err) => {
+        setErrMessage("Failed to delete missions.");
+        console.log(err);
+      });
+  };
+
+
   useEffect(() => {
-    getMissions(sortField)
+    getMissions(sortField, sortDesc)
       .then((result: MissionsResponse) => {
         setMissions(result.data.Missions);
       })
@@ -113,7 +147,7 @@ const Missions = (): JSX.Element => {
         setErrMessage("Failed to load missions.");
         console.log(err);
       });
-  }, [sortField]);
+  }, [sortField, sortDesc]);
 
   return (
     <AppLayout title="Missions">
@@ -128,7 +162,7 @@ const Missions = (): JSX.Element => {
               <FilterAltIcon />
             </IconButton>
             <ListMenu
-              options={["Date", "Title"]}
+              options={["Date", "Title", "Operator"]}
               endIcon={<SortIcon />}
               onSelectionChange={handleSortFieldChange}
             />
@@ -141,88 +175,31 @@ const Missions = (): JSX.Element => {
         {missions ? (
           <Grid container spacing={2}>
             {" "}
-            {missions.map((missions: Mission, key: number) => (
+            {missions.map((mission: Mission, key: number) => (
               <Grid item key={key}>
                 <Card sx={{ width: 275, height: 200 }}>
                   <CardHeader
-                    title={missions.title}
-                    subheader={new Date(missions.launch.date).toDateString()}
+                    title={mission.title}
+                    subheader={new Date(mission.launch.date).toDateString()}
                   />
                   <CardContent>
-                    <Typography noWrap>{missions.operator}</Typography>
+                    <Typography noWrap>{mission.operator}</Typography>
                   </CardContent>
                   <CardActions>
-                    <Button>Edit</Button>
+                    <EditMission setMissions={setMissions} setErrMessage={setErrMessage} id={mission.id!} />
+                    <Button onClick={() => deleteMission(mission.id!)}>Delete</Button>
                   </CardActions>
                 </Card>
               </Grid>
-            ))}
+            ))
+            }
           </Grid>
         ) : (
           <Box sx={{ textAlign: "center" }}>
             <CircularProgress />
           </Box>
         )}
-
-        <Tooltip title="New Mission">
-          <Fab
-            sx={{ position: "fixed", bottom: 16, right: 16 }}
-            color="primary"
-            aria-label="add"
-            onClick={handleNewMissionOpen}
-          >
-            <AddIcon />
-          </Fab>
-        </Tooltip>
-        <Dialog
-          open={newMissionOpen}
-          onClose={handleNewMissionClose}
-          fullWidth
-          maxWidth="sm"
-        >
-          <DialogTitle>New Mission</DialogTitle>
-          <DialogContent>
-            <Grid container direction="column" spacing={2}>
-              <Grid item>
-                <TextField
-                  autoFocus
-                  id="name"
-                  label="Name"
-                  variant="standard"
-                  fullWidth
-                />
-              </Grid>
-              <Grid item>
-                <TextField
-                  autoFocus
-                  id="desc"
-                  label="Description"
-                  variant="standard"
-                  fullWidth
-                />
-              </Grid>
-
-              <Grid item>
-                <LocalizationProvider dateAdapter={AdapterDateFns}>
-                  <DateTimePicker
-                    minDate={new Date()}
-                    minTime={new Date()}
-                    label="Launch Date"
-                    value={tempLaunchDate}
-                    onChange={handleTempLaunchDateChange}
-                    renderInput={(params) => (
-                      <TextField variant="standard" {...params} />
-                    )}
-                  />
-                </LocalizationProvider>
-              </Grid>
-            </Grid>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={handleNewMissionClose}>Cancel</Button>
-            <Button onClick={handleNewMissionClose}>Save</Button>
-          </DialogActions>
-        </Dialog>
+        <NewMission missions={missions} setMissions={setMissions} setErrMessage={setErrMessage} />
       </Container>
       <Snackbar
         open={errMessage != null}
@@ -235,6 +212,8 @@ const Missions = (): JSX.Element => {
         </Alert>
       </Snackbar>
     </AppLayout>
+    // <New />
+
   );
 };
 

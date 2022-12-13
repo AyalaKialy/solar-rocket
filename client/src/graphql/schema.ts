@@ -16,7 +16,7 @@ export type Launch = {
 export type Location = {
   name: String;
   longitude: Number;
-  Latitude: Number;
+  latitude: Number;
 }
 
 export type Orbit = {
@@ -30,3 +30,33 @@ export type Payload = {
   available: Number;
 }
 
+export type WeatherForecast = {
+  location: ForecastLocation;
+  current: ForecastCurrent;
+  forecast: { forecastday: ForecastDay[] };
+}
+
+export type ForecastLocation = {
+  localtime: string;
+  country: string;
+  name: string;
+}
+
+export type ForecastCurrent = {
+  name: string;
+  temp_c: string;
+  condition: ForecastCurrentCondition;
+}
+
+export type ForecastCurrentCondition = {
+  icon: string;
+  text: string;
+}
+
+export type ForecastDay = {
+  date: string;
+  day: {
+    avgtemp_c: string;
+    condition: ForecastCurrentCondition;
+  }
+}

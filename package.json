@@ -16,5 +16,14 @@
   "devDependencies": {
     "concurrently": "^7.1.0",
     "nodemon": "^2.0.15"
+  },
+  "dependencies": {
+    "@material-ui/core": "^4.12.4",
+    "formik": "^2.2.9",
+    "material-ui-icons": "^1.0.0-beta.36",
+    "moment": "^2.29.4",
+    "react-chartjs-2": "^5.0.1",
+    "react-hook-form": "^7.40.0",
+    "react-select-async-paginate": "^0.7.0"
   }
 }
